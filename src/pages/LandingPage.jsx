@@ -3,11 +3,7 @@ import { useState, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import ThemeToggle from '../components/ThemeToggle';
 import { FiShield, FiBarChart2, FiMessageCircle, FiSmartphone, FiTv, FiFileText, FiWifi, FiStar, FiUsers, FiClock, FiAward, FiTrendingUp } from 'react-icons/fi';
-
-// Import reviewer images only
-import img1 from '../assets/img1.jpg';
-import img2 from '../assets/img2.jpg';
-import img3 from '../assets/img3.jpg';
+import API from '../api/api';
 
 // Online images for landing page
 const heroImage = 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80';
@@ -17,16 +13,19 @@ const showcaseImg2 = 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e
 const LandingPage = () => {
   const { darkMode } = useTheme();
   const [testimonials, setTestimonials] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchFeedbacks = async () => {
       try {
-        const response = await fetch('http://localhost:3000/feedbacks/approved');
-        const data = await response.json();
-        setTestimonials(data.length > 0 ? data : defaultTestimonials);
+        setLoading(true);
+        const response = await API.get('/feedbacks/approved');
+        setTestimonials(response.data || []);
       } catch (error) {
         console.error('Error fetching feedbacks:', error);
-        setTestimonials(defaultTestimonials);
+        setTestimonials([]);
+      } finally {
+        setLoading(false);
       }
     };
     fetchFeedbacks();
@@ -60,27 +59,6 @@ const LandingPage = () => {
     { name: 'DTH Recharge', icon: FiTv },
     { name: 'Bill Payments', icon: FiFileText },
     { name: 'Data Packs', icon: FiWifi }
-  ];
-
-  const defaultTestimonials = [
-    {
-      name: 'Mahendra Singh Dhoni',
-      feedback: 'RechargeX has made my life so much easier. Quick and reliable!',
-      rating: 5,
-      image: img1
-    },
-    {
-      name: 'Rohit Sharma',
-      feedback: 'Best recharge platform with amazing offers and cashback.',
-      rating: 5,
-      image: img2
-    },
-    {
-      name: 'Virat Kohli',
-      feedback: 'Simple interface and fast transactions. Highly recommended!',
-      rating: 4,
-      image: img3
-    }
   ];
 
   return (
@@ -376,49 +354,59 @@ const LandingPage = () => {
               </p>
             </div>
             
-            <div className="grid md:grid-cols-3 gap-6">
-              {testimonials.slice(0, 6).map((testimonial, idx) => (
-                <div 
-                  key={testimonial._id || idx}
-                  className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-orange-500 dark:hover:border-orange-500 transition-all"
-                >
-                  <div className="flex mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <FiStar 
-                        key={i} 
-                        className={`w-5 h-5 ${i < testimonial.rating ? 'text-orange-400 fill-orange-400' : 'text-gray-300 dark:text-gray-700'}`}
-                      />
-                    ))}
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4 italic">"{testimonial.feedback}"</p>
-                  <div className="flex items-center">
-                    {(testimonial.profilePhoto || testimonial.image) ? (
-                      <img 
-                        src={testimonial.profilePhoto || testimonial.image} 
-                        alt={testimonial.name}
-                        className="w-12 h-12 rounded-full object-cover mr-3 border-2 border-orange-200 dark:border-orange-800"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '';
-                          e.target.style.display = 'none';
-                          const fallback = e.target.parentElement.querySelector('.fallback-avatar');
-                          if (fallback) fallback.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <div 
-                      className="fallback-avatar w-12 h-12 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30 flex items-center justify-center mr-3 border-2 border-orange-200 dark:border-orange-800"
-                      style={{ display: (testimonial.profilePhoto || testimonial.image) ? 'none' : 'flex' }}
-                    >
-                      <span className="text-orange-600 dark:text-orange-400 font-bold text-lg">
-                        {testimonial.name?.charAt(0).toUpperCase()}
-                      </span>
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+              </div>
+            ) : testimonials.length === 0 ? (
+              <div className="text-center py-12">
+                <FiMessageCircle className="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400 text-lg">No reviews yet. Be the first to share your experience!</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-6">
+                {testimonials.slice(0, 6).map((testimonial, idx) => (
+                  <div 
+                    key={testimonial._id || idx}
+                    className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-orange-500 dark:hover:border-orange-500 transition-all"
+                  >
+                    <div className="flex mb-4">
+                      {[...Array(5)].map((_, i) => (
+                        <FiStar 
+                          key={i} 
+                          className={`w-5 h-5 ${i < testimonial.rating ? 'text-orange-400 fill-orange-400' : 'text-gray-300 dark:text-gray-700'}`}
+                        />
+                      ))}
                     </div>
-                    <span className="font-semibold text-gray-900 dark:text-white">{testimonial.name}</span>
+                    <p className="text-gray-600 dark:text-gray-400 mb-4 italic">"{testimonial.feedback}"</p>
+                    <div className="flex items-center">
+                      {testimonial.profilePhoto ? (
+                        <img 
+                          src={testimonial.profilePhoto} 
+                          alt={testimonial.name}
+                          className="w-12 h-12 rounded-full object-cover mr-3 border-2 border-orange-200 dark:border-orange-800"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.style.display = 'none';
+                            const fallback = e.target.parentElement.querySelector('.fallback-avatar');
+                            if (fallback) fallback.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+                      <div 
+                        className="fallback-avatar w-12 h-12 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30 flex items-center justify-center mr-3 border-2 border-orange-200 dark:border-orange-800"
+                        style={{ display: testimonial.profilePhoto ? 'none' : 'flex' }}
+                      >
+                        <span className="text-orange-600 dark:text-orange-400 font-bold text-lg">
+                          {testimonial.name?.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <span className="font-semibold text-gray-900 dark:text-white">{testimonial.name}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
